@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Article Detail - Readers Hub</title>
+  <meta name="description" content="Read full article on Readers Hub by BAUST Computer Club.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="site-header">
+    <div class="header-container">
+      <!-- Logo -->
+      <a href="index.html" class="brand-logo" aria-label="BAUST Computer Club Home">
+        <img src="img/logo.jpeg" alt="BAUST Computer Club Logo" class="bcc-logo-img">
+      </a>
+
+      <!-- Center Title -->
+      <h1 class="header-title"><a href="index.html" style="text-decoration:none; color:inherit;">Readers Hub</a></h1>
+
+      <!-- Right Header Actions -->
+      <div class="header-actions">
+        <a href="index.html" class="back-btn-link">
+          <span>←</span> Back to Hub
+        </a>
+
+        <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle light/dark theme" title="Toggle Theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Article View Container -->
+  <main class="article-page-container">
+    <div id="articleHeroCard" class="article-reader-view">
+      <div class="article-meta-row">
+        <span id="articleTrack" class="article-track-pill">Track</span>
+        <span id="articleDate" class="article-date-text">2024-08-12</span>
+      </div>
+
+      <h1 id="articleTitle" class="article-main-title">Loading Article...</h1>
+
+      <div id="articleCategories" class="card-categories"></div>
+
+      <div id="articleDescription" class="article-lead-box"></div>
+
+      <div id="articleBody" class="article-body-content"></div>
+
+      <div id="articleTags" class="article-tags-row"></div>
+    </div>
+  </main>
+
+  <!-- Related Articles Section -->
+  <section class="related-section">
+    <h2 class="related-title">Related Articles</h2>
+    <div id="relatedGrid" class="articles-grid"></div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-card">
+      <div class="footer-left">
+        <h4 class="footer-brand">BAUST Computer Club</h4>
+        <p class="footer-copyright">© 2026 BAUST Computer Club, Development Wing</p>
+      </div>
+
+      <div class="footer-links">
+        <a href="index.html" class="footer-link">Home</a>
+        <a href="#privacy" class="footer-link">Privacy Policy</a>
+        <a href="#terms" class="footer-link">Terms of Service</a>
+        <a href="#contact" class="footer-link">Contact</a>
+        <a href="#api" class="footer-link">API Docs</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="article.js"></script>
+</body>
+</html>
