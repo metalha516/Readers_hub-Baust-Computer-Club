@@ -350,12 +350,27 @@
         };
       }
 
+  function formatDateString(rawDateStr) {
+    if (!rawDateStr) return '2026-09-04';
+    const str = String(rawDateStr).trim();
+    const gvizMatch = str.match(/^Date\((\d+),\s*(\d+),\s*(\d+)\)$/i);
+    if (gvizMatch) {
+      const year = gvizMatch[1];
+      const month = String(parseInt(gvizMatch[2], 10) + 1).padStart(2, '0');
+      const day = String(gvizMatch[3]).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    return str;
+  }
+
+      let rawDate = item.Date || item.date || item.publicationDate || '2026-09-04';
+
       return {
         id: item.id || index + 1,
         title: item.title || item.Title || 'Untitled Article',
         category: singleCategory,
         track: track,
-        date: item.Date || item.date || item.publicationDate || '2026-09-04',
+        date: formatDateString(rawDate),
         author: author,
         description: item.Description || item.description || item.summary || 'No description provided.',
         content: item['total article'] || item['Total article'] || item.total_article || item.content || item.Description || ''
