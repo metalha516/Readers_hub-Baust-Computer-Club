@@ -50,8 +50,8 @@
     localStorage.setItem('readers_hub_theme', state.theme);
   }
 
-  // --- CSV Parser Helper ---
-  const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1DosGeXz-sXt5TM-o9oZH92-ETsPEAelJ9Jw-cNS4oQU/gviz/tq?tqx=out:csv';
+  // --- Google Sheets JSONP & CSV Loaders ---
+  const GOOGLE_SHEET_RAW_CSV_URL = 'https://docs.google.com/spreadsheets/d/1DosGeXz-sXt5TM-o9oZH92-ETsPEAelJ9Jw-cNS4oQU/export?format=csv';
 
   function parseCSV(text) {
     const lines = [];
@@ -103,25 +103,95 @@
     });
   }
 
+  // 1. JSONP Loader (Bypasses CORS completely in browser via script injection)
+  function loadSheetViaJSONP() {
+    return new Promise((resolve, reject) => {
+      const callbackName = 'gvizCallback_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+      const timeoutId = setTimeout(() => {
+        if (window[callbackName]) {
+          delete window[callbackName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+          reject(new Error('JSONP request timed out'));
+        }
+      }, 6000);
+
+      window[callbackName] = function(response) {
+        clearTimeout(timeoutId);
+        delete window[callbackName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+
+        try {
+          if (response && response.status === 'ok' && response.table) {
+            const cols = (response.table.cols || []).map(c => (c.label || c.id || '').trim());
+            const rows = (response.table.rows || []).map(r => {
+              const rowObj = {};
+              if (r && r.c) {
+                r.c.forEach((cell, idx) => {
+                  const colName = cols[idx] || `col_${idx}`;
+                  rowObj[colName] = (cell && cell.v !== null && cell.v !== undefined) ? String(cell.v).trim() : '';
+                });
+              }
+              return rowObj;
+            });
+            resolve(rows);
+          } else {
+            reject(new Error('Invalid GViz response format'));
+          }
+        } catch (err) {
+          reject(err);
+        }
+      };
+
+      const script = document.createElement('script');
+      script.src = `https://docs.google.com/spreadsheets/d/1DosGeXz-sXt5TM-o9oZH92-ETsPEAelJ9Jw-cNS4oQU/gviz/tq?tqx=responseHandler:${callbackName}`;
+      script.onerror = (err) => {
+        clearTimeout(timeoutId);
+        delete window[callbackName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        reject(err);
+      };
+      document.head.appendChild(script);
+    });
+  }
+
+  // 2. CORS Proxy Loader fallback
+  async function loadSheetViaCORSProxy() {
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(GOOGLE_SHEET_RAW_CSV_URL)}`;
+    const response = await fetch(proxyUrl);
+    if (!response.ok) throw new Error(`Proxy status: ${response.status}`);
+    const text = await response.text();
+    const parsed = parseCSV(text);
+    if (!parsed || parsed.length === 0) throw new Error('Proxy CSV empty');
+    return parsed;
+  }
+
   // --- Data Loading & Normalization ---
   async function loadArticles() {
-    // 1. Try live Google Sheet CSV URL
+    // 1. Try JSONP Google Sheets API (No CORS issue)
     try {
-      const response = await fetch(GOOGLE_SHEET_CSV_URL);
-      if (response.ok) {
-        const text = await response.text();
-        const parsed = parseCSV(text);
-        if (parsed && parsed.length > 0) {
-          state.allArticles = normalizeArticles(parsed);
-          onDataLoaded();
-          return;
-        }
+      const jsonpRows = await loadSheetViaJSONP();
+      if (jsonpRows && jsonpRows.length > 0) {
+        state.allArticles = normalizeArticles(jsonpRows);
+        onDataLoaded();
+        return;
       }
-    } catch (csvErr) {
-      console.warn('Fetch live Google Sheet CSV failed, falling back to local data.json:', csvErr);
+    } catch (err1) {
+      console.warn('JSONP sheet load failed, trying CORS proxy fallback:', err1);
     }
 
-    // 2. Local data.json fallback
+    // 2. Try CORS Proxy Google Sheet CSV
+    try {
+      const proxyRows = await loadSheetViaCORSProxy();
+      if (proxyRows && proxyRows.length > 0) {
+        state.allArticles = normalizeArticles(proxyRows);
+        onDataLoaded();
+        return;
+      }
+    } catch (err2) {
+      console.warn('CORS Proxy sheet load failed, trying local data.json:', err2);
+    }
+
+    // 3. Local data.json fallback
     try {
       const response = await fetch('data.json');
       if (response.ok) {
@@ -134,7 +204,7 @@
       console.warn('Fetch data.json failed. Falling back to window.DEFAULT_DATA:', error);
     }
 
-    // 3. window.DEFAULT_DATA fallback
+    // 4. window.DEFAULT_DATA fallback
     if (window.DEFAULT_DATA && (Array.isArray(window.DEFAULT_DATA) || typeof window.DEFAULT_DATA === 'object')) {
       state.allArticles = normalizeArticles(window.DEFAULT_DATA);
       onDataLoaded();
