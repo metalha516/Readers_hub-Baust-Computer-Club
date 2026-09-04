@@ -40,7 +40,7 @@
       if (response.ok) {
         const rawData = await response.json();
         allArticles = normalizeArticles(rawData);
-        onDataLoaded();
+        renderArticle();
         return;
       }
     } catch (err) {
@@ -49,30 +49,34 @@
 
     if (window.DEFAULT_DATA) {
       allArticles = normalizeArticles(window.DEFAULT_DATA);
-      onDataLoaded();
+      renderArticle();
     } else {
       showError('Could not load article dataset.');
     }
   }
 
-  function onDataLoaded() {
-    renderArticle();
-    populateNavAuthorsMenu();
-    setupNavAuthorsDropdown();
-  }
-
   function normalizeArticles(rawData) {
     let items = Array.isArray(rawData) ? rawData : (rawData.articles || [rawData]);
     return items.map((item, index) => {
-      let categories = Array.isArray(item.categories) ? item.categories : (typeof item.categories === 'string' ? item.categories.split(',') : ['General']);
-      let tags = Array.isArray(item.tags) ? item.tags : (typeof item.tags === 'string' ? item.tags.split(',') : ['Tech']);
+      // Single Category String
+      let singleCategory = 'General';
+      if (item.category && typeof item.category === 'string') {
+        singleCategory = item.category.trim();
+      } else if (Array.isArray(item.categories) && item.categories.length > 0) {
+        singleCategory = item.categories[0].trim();
+      } else if (typeof item.categories === 'string') {
+        singleCategory = item.categories.split(',')[0].trim();
+      }
+
       let track = item.track || 'Engineering';
 
       let author = null;
       if (item.author && typeof item.author === 'object') {
+        let rawRole = (item.author.role || 'teacher').toLowerCase();
+        if (rawRole === 'faculty') rawRole = 'teacher';
         author = {
-          name: item.author.name || 'Anonymous Contributor',
-          role: (item.author.role || 'faculty').toLowerCase(),
+          name: item.author.name || 'Anonymous Writer',
+          role: ['teacher', 'alumni', 'student'].includes(rawRole) ? rawRole : 'teacher',
           designation: item.author.designation || '',
           department: item.author.department || item.author.dept || '',
           company: item.author.company || '',
@@ -82,8 +86,8 @@
       } else if (typeof item.author === 'string') {
         author = {
           name: item.author,
-          role: 'faculty',
-          designation: 'Contributor',
+          role: 'teacher',
+          designation: 'Teacher',
           department: 'Department of CSE',
           company: '',
           batch: '',
@@ -91,9 +95,9 @@
         };
       } else {
         author = {
-          name: 'BAUST Contributor',
-          role: 'faculty',
-          designation: 'Contributor',
+          name: 'BAUST Teacher',
+          role: 'teacher',
+          designation: 'Teacher',
           department: 'Department of CSE',
           company: '',
           batch: '',
@@ -104,13 +108,12 @@
       return {
         id: item.id || index + 1,
         title: item.title || item.Title || 'Untitled Article',
-        categories: categories.map(c => c.trim()),
+        category: singleCategory,
         track: track,
         date: item.Date || item.date || '2024-08-12',
         author: author,
         description: item.Description || item.description || '',
-        content: item['total article'] || item.total_article || item.content || item.Description || '',
-        tags: tags.map(t => t.trim())
+        content: item['total article'] || item.total_article || item.content || item.Description || ''
       };
     });
   }
@@ -134,30 +137,25 @@
     // Render Author Details inline under Title
     renderAuthorBox(article.author);
 
-    // Categories
+    // Single Category Badge (ONLY 1 CATEGORY PER TITLE)
     const catContainer = document.getElementById('articleCategories');
     catContainer.innerHTML = '';
-    article.categories.forEach(cat => {
-      const span = document.createElement('span');
-      const normCat = cat.toLowerCase().replace(/\s+/g, '-');
-      span.className = `cat-badge ${normCat} default`;
-      span.textContent = cat;
-      catContainer.appendChild(span);
-    });
+    const span = document.createElement('span');
+    const normCat = article.category.toLowerCase().replace(/\s+/g, '-');
+    span.className = `cat-badge ${normCat} default`;
+    span.textContent = article.category;
+    catContainer.appendChild(span);
 
     // Description & Content
     document.getElementById('articleDescription').textContent = article.description;
     document.getElementById('articleBody').innerHTML = formatContent(article.content);
 
-    // Tags
+    // Tags section (empty/hidden)
     const tagContainer = document.getElementById('articleTags');
-    tagContainer.innerHTML = '';
-    article.tags.forEach(tag => {
-      const tagPill = document.createElement('span');
-      tagPill.className = 'tag-pill';
-      tagPill.innerHTML = `<span>${getTagIcon(tag)}</span> <span>${tag}</span>`;
-      tagContainer.appendChild(tagPill);
-    });
+    if (tagContainer) {
+      tagContainer.innerHTML = '';
+      tagContainer.style.display = 'none';
+    }
 
     // Render Related Articles
     renderRelated(article);
@@ -167,7 +165,9 @@
     const authorBox = document.getElementById('articleAuthorBox');
     if (!authorBox || !author) return;
 
-    const role = (author.role || '').toLowerCase();
+    let role = (author.role || '').toLowerCase();
+    if (role === 'faculty') role = 'teacher';
+
     let roleBadge = '';
     let detailsParts = [];
 
@@ -181,8 +181,8 @@
       if (author.levelTerm) detailsParts.push(`<span class="level-term-text">${escapeHtml(author.levelTerm)}</span>`);
       if (author.department) detailsParts.push(escapeHtml(author.department));
     } else {
-      // Faculty / General
-      roleBadge = '<span class="author-role-badge faculty">Faculty</span>';
+      // Teacher / Faculty
+      roleBadge = '<span class="author-role-badge teacher">Teacher</span>';
       if (author.designation) detailsParts.push(escapeHtml(author.designation));
       if (author.department) detailsParts.push(escapeHtml(author.department));
     }
@@ -199,74 +199,6 @@
     `;
   }
 
-  // Populate navbar dropdown with author categories only
-  function populateNavAuthorsMenu() {
-    const menu = document.getElementById('navAuthorsMenu');
-    if (!menu) return;
-
-    const categories = [
-      { role: null, label: 'All Authors', icon: '👥', subText: 'Show all articles' },
-      { role: 'faculty', label: 'Faculty', icon: '👨‍🏫', subText: 'Teachers & Professors' },
-      { role: 'alumni', label: 'Alumni', icon: '🎓', subText: 'Graduates & Industry Experts' },
-      { role: 'student', label: 'Students', icon: '🧑‍🎓', subText: 'Undergraduate Writers' }
-    ];
-
-    menu.innerHTML = '';
-
-    categories.forEach(cat => {
-      const item = document.createElement('div');
-      item.className = 'author-menu-item';
-
-      const roleBadgeHTML = cat.role ? `<span class="author-role-badge ${cat.role}">${cat.label}</span>` : '';
-
-      item.innerHTML = `
-        <div class="author-menu-avatar ${cat.role ? cat.role : 'reset-avatar'}">${cat.icon}</div>
-        <div class="author-menu-info">
-          <div class="author-menu-name-row">
-            <span class="author-menu-name">${cat.label}</span>
-            ${roleBadgeHTML}
-          </div>
-          <div class="author-menu-sub">${cat.subText}</div>
-        </div>
-      `;
-
-      item.addEventListener('click', () => {
-        if (cat.role) {
-          window.location.href = `index.html?authorCategory=${cat.role}`;
-        } else {
-          window.location.href = 'index.html';
-        }
-      });
-
-      menu.appendChild(item);
-    });
-  }
-
-  function setupNavAuthorsDropdown() {
-    const btn = document.getElementById('navAuthorsBtn');
-    const menu = document.getElementById('navAuthorsMenu');
-    if (!btn || !menu) return;
-
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isOpen = menu.classList.contains('show');
-      if (isOpen) {
-        menu.classList.remove('show');
-        btn.classList.remove('active');
-      } else {
-        menu.classList.add('show');
-        btn.classList.add('active');
-      }
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!btn.contains(e.target) && !menu.contains(e.target)) {
-        menu.classList.remove('show');
-        btn.classList.remove('active');
-      }
-    });
-  }
-
   function formatContent(text) {
     if (!text) return '<p>No full text available.</p>';
     return text
@@ -278,20 +210,6 @@
       })
       .filter(Boolean)
       .join('');
-  }
-
-  function getTagIcon(tag) {
-    const t = tag.toLowerCase();
-    if (t.includes('ai') || t.includes('intelligence') || t.includes('learning')) return '🤖';
-    if (t.includes('climate') || t.includes('agri')) return '🌿';
-    if (t.includes('edtech') || t.includes('education') || t.includes('teacher') || t.includes('student') || t.includes('academic')) return '🎓';
-    if (t.includes('eca')) return '🏆';
-    if (t.includes('blockchain') || t.includes('crypto')) return '🔗';
-    if (t.includes('logistics') || t.includes('supply')) return '📦';
-    if (t.includes('iot') || t.includes('sensor')) return '📡';
-    if (t.includes('health') || t.includes('bio')) return '🧬';
-    if (t.includes('security') || t.includes('privacy')) return '🛡️';
-    return '⚡';
   }
 
   function escapeHtml(str) {
@@ -333,24 +251,24 @@
       top.appendChild(date);
 
       // Author summary byline
+      let roleName = article.author.role === 'faculty' ? 'teacher' : article.author.role;
       const authorByline = document.createElement('div');
       authorByline.className = 'card-author-wrapper';
       authorByline.innerHTML = `
         <div class="card-author-byline">
           <span class="author-name">${escapeHtml(article.author.name)}</span>
-          <span class="author-role-badge ${escapeHtml(article.author.role)}">${escapeHtml(article.author.role)}</span>
+          <span class="author-role-badge ${escapeHtml(roleName)}">${escapeHtml(roleName.toUpperCase())}</span>
         </div>
       `;
 
+      // Single Category Badge
       const cats = document.createElement('div');
       cats.className = 'card-categories';
-      article.categories.forEach(cat => {
-        const catBadge = document.createElement('span');
-        const normCat = cat.toLowerCase().replace(/\s+/g, '-');
-        catBadge.className = `cat-badge ${normCat} default`;
-        catBadge.textContent = cat;
-        cats.appendChild(catBadge);
-      });
+      const catBadge = document.createElement('span');
+      const normCat = article.category.toLowerCase().replace(/\s+/g, '-');
+      catBadge.className = `cat-badge ${normCat} default`;
+      catBadge.textContent = article.category;
+      cats.appendChild(catBadge);
 
       const desc = document.createElement('p');
       desc.className = 'card-description';
@@ -358,6 +276,7 @@
 
       const bottom = document.createElement('div');
       bottom.className = 'card-bottom';
+      bottom.style.justifyContent = 'flex-end';
 
       const viewBtn = document.createElement('a');
       viewBtn.className = 'view-btn';

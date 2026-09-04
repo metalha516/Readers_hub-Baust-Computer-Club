@@ -9,7 +9,7 @@
     filteredArticles: [],
     currentTrack: 'All',
     selectedTags: new Set(),
-    selectedAuthorRole: null, // 'faculty' | 'alumni' | 'student' | null
+    selectedAuthorRole: null, // 'teacher' | 'alumni' | 'student' | null
     searchQuery: '',
     currentPage: 1,
     pageSize: 24,
@@ -84,8 +84,8 @@
     const categoryParam = params.get('authorCategory') || params.get('role');
     if (categoryParam) {
       const norm = categoryParam.toLowerCase();
-      if (['faculty', 'alumni', 'student'].includes(norm)) {
-        state.selectedAuthorRole = norm;
+      if (['teacher', 'faculty', 'alumni', 'student'].includes(norm)) {
+        state.selectedAuthorRole = (norm === 'faculty') ? 'teacher' : norm;
       }
     }
   }
@@ -95,7 +95,7 @@
     const btns = document.querySelectorAll('.author-cat-nav-btn');
     btns.forEach(btn => {
       const role = btn.getAttribute('data-role');
-      if (role === current) {
+      if (role === current || (current === 'teacher' && role === 'faculty')) {
         btn.classList.add('active');
       } else {
         btn.classList.remove('active');
@@ -104,7 +104,7 @@
   }
 
   function selectAuthorCategory(role) {
-    state.selectedAuthorRole = role;
+    state.selectedAuthorRole = (role === 'faculty') ? 'teacher' : role;
 
     // Update URL param
     const url = new URL(window.location);
@@ -133,33 +133,26 @@
     }
 
     return items.map((item, index) => {
-      let categories = [];
-      if (Array.isArray(item.categories)) {
-        categories = item.categories;
+      // Single Category String
+      let singleCategory = 'General';
+      if (item.category && typeof item.category === 'string') {
+        singleCategory = item.category.trim();
+      } else if (Array.isArray(item.categories) && item.categories.length > 0) {
+        singleCategory = item.categories[0].trim();
       } else if (typeof item.categories === 'string') {
-        categories = item.categories.split(',').map(c => c.trim());
-      }
-
-      let tags = [];
-      if (Array.isArray(item.tags)) {
-        tags = item.tags;
-      } else if (typeof item.tags === 'string') {
-        tags = item.tags.split(',').map(t => t.trim());
+        singleCategory = item.categories.split(',')[0].trim();
       }
 
       let track = item.track || 'Engineering';
-      if (categories.some(c => c.toLowerCase().includes('business'))) {
-        track = 'Business';
-      } else if (categories.some(c => c.toLowerCase().includes('enterprise') || c.toLowerCase().includes('supply chain'))) {
-        track = 'Enterprise';
-      }
 
-      // Author extraction
+      // Author extraction (role: teacher, alumni, or student)
       let author = null;
       if (item.author && typeof item.author === 'object') {
+        let rawRole = (item.author.role || 'teacher').toLowerCase();
+        if (rawRole === 'faculty') rawRole = 'teacher';
         author = {
-          name: item.author.name || 'Anonymous Contributor',
-          role: (item.author.role || 'faculty').toLowerCase(),
+          name: item.author.name || 'Anonymous Writer',
+          role: ['teacher', 'alumni', 'student'].includes(rawRole) ? rawRole : 'teacher',
           designation: item.author.designation || '',
           department: item.author.department || item.author.dept || '',
           company: item.author.company || '',
@@ -169,8 +162,8 @@
       } else if (typeof item.author === 'string') {
         author = {
           name: item.author,
-          role: 'faculty',
-          designation: 'Contributor',
+          role: 'teacher',
+          designation: 'Teacher',
           department: 'Department of CSE',
           company: '',
           batch: '',
@@ -178,9 +171,9 @@
         };
       } else {
         author = {
-          name: 'BAUST Contributor',
-          role: 'faculty',
-          designation: 'Contributor',
+          name: 'BAUST Teacher',
+          role: 'teacher',
+          designation: 'Teacher',
           department: 'Department of CSE',
           company: '',
           batch: '',
@@ -191,13 +184,12 @@
       return {
         id: item.id || index + 1,
         title: item.title || item.Title || 'Untitled Article',
-        categories: categories.length ? categories : ['general'],
+        category: singleCategory,
         track: track,
         date: item.Date || item.date || item.publicationDate || '2024-08-12',
         author: author,
         description: item.Description || item.description || item.summary || 'No description provided.',
-        content: item['total article'] || item.total_article || item.content || item.Description || '',
-        tags: tags.length ? tags : ['Technology']
+        content: item['total article'] || item.total_article || item.content || item.Description || ''
       };
     });
   }
@@ -205,32 +197,34 @@
   // --- Tags Menu Initialization ---
   function populateTagsMenu() {
     if (!elements.tagsMenu) return;
-    const allTagsSet = new Set();
+
+    // Build tags dynamically from single categories & tracks
+    const categoriesSet = new Set();
     state.allArticles.forEach(art => {
-      art.tags.forEach(t => allTagsSet.add(t));
+      if (art.category) categoriesSet.add(art.category);
     });
 
     elements.tagsMenu.innerHTML = '';
-    allTagsSet.forEach(tag => {
+    categoriesSet.forEach(cat => {
       const option = document.createElement('label');
       option.className = 'tag-option-item';
-      
+
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
-      checkbox.value = tag;
-      checkbox.checked = state.selectedTags.has(tag);
+      checkbox.value = cat;
+      checkbox.checked = state.selectedTags.has(cat);
 
       checkbox.addEventListener('change', () => {
         if (checkbox.checked) {
-          state.selectedTags.add(tag);
+          state.selectedTags.add(cat);
         } else {
-          state.selectedTags.delete(tag);
+          state.selectedTags.delete(cat);
         }
         applyFilters();
       });
 
       const span = document.createElement('span');
-      span.textContent = tag;
+      span.textContent = cat;
 
       option.appendChild(checkbox);
       option.appendChild(span);
@@ -243,7 +237,7 @@
     const q = state.searchQuery.toLowerCase().trim();
 
     state.filteredArticles = state.allArticles.filter(article => {
-      // Author Category Filter
+      // Author Role Filter (teacher, alumni, student)
       if (state.selectedAuthorRole) {
         if (article.author.role.toLowerCase() !== state.selectedAuthorRole.toLowerCase()) {
           return false;
@@ -255,26 +249,25 @@
         return false;
       }
 
-      // Tags Filter
+      // Category Filter (via dropdown)
       if (state.selectedTags.size > 0) {
-        const hasSelectedTag = Array.from(state.selectedTags).some(selectedTag =>
-          article.tags.some(t => t.toLowerCase() === selectedTag.toLowerCase())
+        const matchesCategory = Array.from(state.selectedTags).some(selectedCat =>
+          article.category.toLowerCase() === selectedCat.toLowerCase()
         );
-        if (!hasSelectedTag) return false;
+        if (!matchesCategory) return false;
       }
 
       // Search Query Filter
       if (q) {
         const titleMatch = article.title.toLowerCase().includes(q);
         const descMatch = article.description.toLowerCase().includes(q);
-        const catMatch = article.categories.some(c => c.toLowerCase().includes(q));
-        const tagMatch = article.tags.some(t => t.toLowerCase().includes(q));
+        const catMatch = article.category.toLowerCase().includes(q);
         const trackMatch = article.track.toLowerCase().includes(q);
         const authorNameMatch = article.author.name.toLowerCase().includes(q);
         const authorDeptMatch = article.author.department.toLowerCase().includes(q);
         const authorCompanyMatch = article.author.company.toLowerCase().includes(q);
 
-        return titleMatch || descMatch || catMatch || tagMatch || trackMatch || authorNameMatch || authorDeptMatch || authorCompanyMatch;
+        return titleMatch || descMatch || catMatch || trackMatch || authorNameMatch || authorDeptMatch || authorCompanyMatch;
       }
 
       return true;
@@ -294,8 +287,8 @@
   function renderCounter() {
     let text = `Total articles: ${state.filteredArticles.length}`;
     if (state.selectedAuthorRole) {
-      const categoryTitle = state.selectedAuthorRole.charAt(0).toUpperCase() + state.selectedAuthorRole.slice(1);
-      text += ` (Author Category: "${categoryTitle}")`;
+      const roleName = state.selectedAuthorRole.charAt(0).toUpperCase() + state.selectedAuthorRole.slice(1);
+      text += ` (Author Category: "${roleName}s")`;
     }
     elements.articleCountLabel.textContent = text;
   }
@@ -321,10 +314,11 @@
     });
   }
 
-  // Author details directly under title (Clean inline text layout, NO separate card box)
+  // Format Author Byline (Strict Teacher, Alumni, Student badges)
   function formatAuthorBylineHTML(author) {
     if (!author) return '';
-    const role = (author.role || '').toLowerCase();
+    let role = (author.role || '').toLowerCase();
+    if (role === 'faculty') role = 'teacher';
 
     let roleBadge = '';
     let detailsParts = [];
@@ -339,8 +333,8 @@
       if (author.levelTerm) detailsParts.push(`<span class="level-term-text">${escapeHtml(author.levelTerm)}</span>`);
       if (author.department) detailsParts.push(escapeHtml(author.department));
     } else {
-      // Faculty / General
-      roleBadge = '<span class="author-role-badge faculty">Faculty</span>';
+      // Teacher / Faculty
+      roleBadge = '<span class="author-role-badge teacher">Teacher</span>';
       if (author.designation) detailsParts.push(escapeHtml(author.designation));
       if (author.department) detailsParts.push(escapeHtml(author.department));
     }
@@ -360,7 +354,7 @@
     const card = document.createElement('article');
     card.className = 'article-card';
 
-    // Header top
+    // Header top: Title & Date
     const cardTop = document.createElement('div');
     cardTop.className = 'card-top';
 
@@ -380,75 +374,48 @@
     cardTop.appendChild(titleLink);
     cardTop.appendChild(date);
 
-    // Author details text right under title (No inner card)
+    // Author details text right under title (Teacher, Alumni, or Student)
     const authorByline = document.createElement('div');
     authorByline.className = 'card-author-wrapper';
     authorByline.innerHTML = formatAuthorBylineHTML(article.author);
 
-    // Categories
+    // Single Category Badge (ONLY 1 CATEGORY PER TITLE)
     const catContainer = document.createElement('div');
     catContainer.className = 'card-categories';
-    article.categories.forEach(cat => {
-      const catBadge = document.createElement('span');
-      const normalizedCat = cat.toLowerCase().replace(/\s+/g, '-');
-      catBadge.className = `cat-badge ${normalizedCat} default`;
-      catBadge.textContent = cat;
-      catContainer.appendChild(catBadge);
-    });
+    const catBadge = document.createElement('span');
+    const normalizedCat = article.category.toLowerCase().replace(/\s+/g, '-');
+    catBadge.className = `cat-badge ${normalizedCat} default`;
+    catBadge.textContent = article.category;
+    catContainer.appendChild(catBadge);
 
     // Description
     const desc = document.createElement('p');
     desc.className = 'card-description';
     desc.textContent = article.description;
 
-    // Card Bottom
+    // Card Bottom (View Details button only, tags removed as requested)
     const cardBottom = document.createElement('div');
     cardBottom.className = 'card-bottom';
+    cardBottom.style.justifyContent = 'flex-end'; // Align button neatly to the right
 
-    // Tags
-    const tagContainer = document.createElement('div');
-    tagContainer.className = 'card-tags';
-    article.tags.forEach(tag => {
-      const tagPill = document.createElement('span');
-      tagPill.className = 'tag-pill';
-      tagPill.innerHTML = `<span>${getTagIcon(tag)}</span> <span>${tag}</span>`;
-      tagContainer.appendChild(tagPill);
-    });
-
-    // Link Button
     const viewBtn = document.createElement('a');
     viewBtn.className = 'view-btn';
     viewBtn.href = `article.html?id=${article.id}`;
     viewBtn.innerHTML = `<span>View details</span> <span>→</span>`;
 
-    cardBottom.appendChild(tagContainer);
     cardBottom.appendChild(viewBtn);
 
     // Assemble Card
     const topWrapper = document.createElement('div');
     topWrapper.appendChild(cardTop);
-    topWrapper.appendChild(authorByline); // Author details written right under title
-    topWrapper.appendChild(catContainer);
+    topWrapper.appendChild(authorByline); // Author details
+    topWrapper.appendChild(catContainer); // Single category badge
     topWrapper.appendChild(desc);
 
     card.appendChild(topWrapper);
     card.appendChild(cardBottom);
 
     return card;
-  }
-
-  function getTagIcon(tag) {
-    const t = tag.toLowerCase();
-    if (t.includes('ai') || t.includes('intelligence') || t.includes('learning')) return '🤖';
-    if (t.includes('climate') || t.includes('agri')) return '🌿';
-    if (t.includes('edtech') || t.includes('education') || t.includes('teacher') || t.includes('student') || t.includes('academic')) return '🎓';
-    if (t.includes('eca')) return '🏆';
-    if (t.includes('blockchain') || t.includes('crypto')) return '🔗';
-    if (t.includes('logistics') || t.includes('supply')) return '📦';
-    if (t.includes('iot') || t.includes('sensor')) return '📡';
-    if (t.includes('health') || t.includes('bio')) return '🧬';
-    if (t.includes('security') || t.includes('privacy')) return '🛡️';
-    return '⚡';
   }
 
   // --- Pagination ---

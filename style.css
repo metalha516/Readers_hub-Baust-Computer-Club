@@ -1022,7 +1022,7 @@ body {
   line-height: 1.3;
 }
 
-.author-role-badge.faculty {
+.author-role-badge.faculty, .author-role-badge.teacher {
   background-color: rgba(59, 130, 246, 0.12);
   color: #2563eb;
   border: 1px solid rgba(59, 130, 246, 0.25);
@@ -1040,7 +1040,7 @@ body {
   border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
-[data-theme="dark"] .author-role-badge.faculty {
+[data-theme="dark"] .author-role-badge.faculty, [data-theme="dark"] .author-role-badge.teacher {
   background-color: rgba(96, 165, 250, 0.2);
   color: #93c5fd;
 }
