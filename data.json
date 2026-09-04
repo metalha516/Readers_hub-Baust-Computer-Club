@@ -8,6 +8,12 @@
     ],
     "track": "Business",
     "Date": "2024-08-12",
+    "author": {
+      "name": "Dr. Ahsan Habib",
+      "role": "faculty",
+      "designation": "Associate Professor",
+      "department": "Department of CSE"
+    },
     "Description": "Smallholder farmers lose 20-40% of staple crops to fungal disease detected too late for treatment. FungalForecast turns a single phone photo of a leaf, combined with hyperlocal humidity and temperature data, into a same-day disease-risk forecast and a costed treatment plan in the farmer's own language.",
     "tags": [
       "Academic",
@@ -25,6 +31,12 @@
     ],
     "track": "Engineering",
     "Date": "2024-08-10",
+    "author": {
+      "name": "Nafis Fuad",
+      "role": "student",
+      "levelTerm": "Level 4, Term 1",
+      "department": "Department of CSE"
+    },
     "Description": "A spaced-repetition learning platform that analyzes student code submissions to identify specific conceptual misunderstandings (e.g., confusing references with values), and automatically generates targeted micro-exercises to bridge the gap before the student can proceed.",
     "tags": [
       "Students",
@@ -42,6 +54,13 @@
     ],
     "track": "Enterprise",
     "Date": "2024-08-05",
+    "author": {
+      "name": "Tanvir Ahmed",
+      "role": "alumni",
+      "designation": "Senior Software Engineer",
+      "company": "TechCorp Systems",
+      "batch": "3rd Batch"
+    },
     "Description": "An immutable ledger system for tracking the lifecycle of electronic components to ensure proper recycling and reduce e-waste. It provides a verifiable trail from manufacturer to consumer to recycling facility, incentivizing closed-loop electronics manufacturing.",
     "tags": [
       "Blockchain",
@@ -59,6 +78,12 @@
     ],
     "track": "Engineering",
     "Date": "2024-08-03",
+    "author": {
+      "name": "Mahmudur Rahman",
+      "role": "student",
+      "levelTerm": "Level 3, Term 2",
+      "department": "Department of EEE"
+    },
     "Description": "BAUST Computer Club's flagship extra-curricular robotics and hackathon competition bringing together university students to build autonomous hardware and software solutions.",
     "tags": [
       "ECA",
@@ -76,6 +101,12 @@
     ],
     "track": "Engineering",
     "Date": "2024-07-30",
+    "author": {
+      "name": "Prof. Dr. M. A. Rashid",
+      "role": "faculty",
+      "designation": "Professor & Head",
+      "department": "Department of CSE"
+    },
     "Description": "Centralized thesis repository and citation index facilitating collaborative academic research publication between university faculty and undergraduate researchers.",
     "tags": [
       "Academic",
@@ -93,6 +124,13 @@
     ],
     "track": "Engineering",
     "Date": "2024-08-01",
+    "author": {
+      "name": "Sabbir Hossain",
+      "role": "alumni",
+      "designation": "Principal IoT Architect",
+      "company": "GreenEnergy Global",
+      "batch": "1st Batch"
+    },
     "Description": "Real-time AI telemetry for microgrid balance. GridPulse predicts renewable power drops due to local microclimates and coordinates distributed battery storage systems to prevent localized blackouts.",
     "tags": [
       "Smart Grid",
@@ -110,6 +148,12 @@
     ],
     "track": "Business",
     "Date": "2024-07-28",
+    "author": {
+      "name": "Anika Tabassum",
+      "role": "student",
+      "levelTerm": "Level 4, Term 2",
+      "department": "Department of CSE"
+    },
     "Description": "Low-cost IoT water quality monitoring nodes for rural community wells, detecting heavy metal contamination and bacterial blooms in real-time and alerting local public health officers.",
     "tags": [
       "IoT",
@@ -127,6 +171,12 @@
     ],
     "track": "Enterprise",
     "Date": "2024-07-22",
+    "author": {
+      "name": "Dr. Ahsan Habib",
+      "role": "faculty",
+      "designation": "Associate Professor",
+      "department": "Department of CSE"
+    },
     "Description": "Zero-trust identity governance platform designed for decentralized hybrid workforce cloud access control, featuring continuous risk-based step-up authentication.",
     "tags": [
       "Cybersecurity",
@@ -144,6 +194,13 @@
     ],
     "track": "Engineering",
     "Date": "2024-07-18",
+    "author": {
+      "name": "Tanvir Ahmed",
+      "role": "alumni",
+      "designation": "Senior Software Engineer",
+      "company": "TechCorp Systems",
+      "batch": "3rd Batch"
+    },
     "Description": "Accelerated cloud-native genomic sequence alignment engine utilizing GPU vector instructions for rapid rare disease variant identification.",
     "tags": [
       "Bioinformatics",
@@ -161,6 +218,13 @@
     ],
     "track": "Enterprise",
     "Date": "2024-07-15",
+    "author": {
+      "name": "Rashik Ishrak",
+      "role": "alumni",
+      "designation": "Supply Chain Tech Lead",
+      "company": "Express Logistics",
+      "batch": "2nd Batch"
+    },
     "Description": "Dynamic last-mile freight dispatch optimization platform reducing carbon emissions and delivery times through real-time traffic graph analysis.",
     "tags": [
       "Logistics",
@@ -178,6 +242,12 @@
     ],
     "track": "Business",
     "Date": "2024-07-10",
+    "author": {
+      "name": "Nafis Fuad",
+      "role": "student",
+      "levelTerm": "Level 4, Term 1",
+      "department": "Department of CSE"
+    },
     "Description": "AI-powered automated financial modeling platform for early-stage startup cash flow projection and scenario sensitivity planning.",
     "tags": [
       "FinTech",
@@ -195,6 +265,12 @@
     ],
     "track": "Engineering",
     "Date": "2024-07-04",
+    "author": {
+      "name": "Dr. Syeda Farzana",
+      "role": "faculty",
+      "designation": "Assistant Professor",
+      "department": "Department of CSE"
+    },
     "Description": "Adaptive cognitive load assessment tool using eye-tracking telemetry to tailor digital educational materials to individual student focus states.",
     "tags": [
       "Teachers",

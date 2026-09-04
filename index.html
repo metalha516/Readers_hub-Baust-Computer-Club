@@ -21,33 +21,41 @@
   <!-- Top Navigation Header -->
   <header class="site-header">
     <div class="header-container">
-      <!-- Logo -->
-      <a href="index.html" class="brand-logo" aria-label="BAUST Computer Club Home">
+      <!-- Left: Logo + Readers Hub title side-by-side -->
+      <a href="index.html" class="brand-logo-group" aria-label="BAUST Computer Club Home">
         <img src="img/logo.jpeg" alt="BAUST Computer Club Logo" class="bcc-logo-img">
+        <h1 class="header-title">Readers Hub</h1>
       </a>
 
-      <!-- Center Title -->
-      <h1 class="header-title">Readers Hub</h1>
+      <!-- Center/Right: Author Category Nav Buttons (No dropdown) -->
+      <nav class="nav-author-categories" aria-label="Author Categories">
+        <button class="author-cat-nav-btn active" data-role="all">All Authors</button>
+        <button class="author-cat-nav-btn" data-role="faculty">Faculty</button>
+        <button class="author-cat-nav-btn" data-role="alumni">Alumni</button>
+        <button class="author-cat-nav-btn" data-role="student">Students</button>
+      </nav>
 
       <!-- Right Theme Toggle -->
-      <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle light/dark theme" title="Toggle Theme">
-        <!-- Sun Icon (shown in dark mode) -->
-        <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="5"></circle>
-          <line x1="12" y1="1" x2="12" y2="3"></line>
-          <line x1="12" y1="21" x2="12" y2="23"></line>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-          <line x1="1" y1="12" x2="3" y2="12"></line>
-          <line x1="21" y1="12" x2="23" y2="12"></line>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-        </svg>
-        <!-- Moon Icon (shown in light mode) -->
-        <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-        </svg>
-      </button>
+      <div class="header-actions">
+        <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle light/dark theme" title="Toggle Theme">
+          <!-- Sun Icon (shown in dark mode) -->
+          <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <!-- Moon Icon (shown in light mode) -->
+          <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
     </div>
   </header>
 

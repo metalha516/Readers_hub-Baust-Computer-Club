@@ -9,6 +9,7 @@
     filteredArticles: [],
     currentTrack: 'All',
     selectedTags: new Set(),
+    selectedAuthorRole: null, // 'faculty' | 'alumni' | 'student' | null
     searchQuery: '',
     currentPage: 1,
     pageSize: 24,
@@ -56,8 +57,7 @@
       if (response.ok) {
         const rawData = await response.json();
         state.allArticles = normalizeArticles(rawData);
-        populateTagsMenu();
-        applyFilters();
+        onDataLoaded();
         return;
       }
     } catch (error) {
@@ -66,25 +66,58 @@
 
     if (window.DEFAULT_DATA && (Array.isArray(window.DEFAULT_DATA) || typeof window.DEFAULT_DATA === 'object')) {
       state.allArticles = normalizeArticles(window.DEFAULT_DATA);
-      populateTagsMenu();
-      applyFilters();
+      onDataLoaded();
     } else {
       renderErrorState('Failed to load articles data.');
     }
   }
 
-  function formatArticleContent(text) {
-    if (!text) return '<p>No content available for this article.</p>';
+  function onDataLoaded() {
+    populateTagsMenu();
+    checkUrlAuthorCategoryParam();
+    updateNavAuthorCatButtons();
+    applyFilters();
+  }
 
-    return text
-      .split('\n\n')
-      .map(paragraph => {
-        const cleanText = paragraph.replace(/^###\s*/, '').trim();
-        if (!cleanText) return '';
-        return `<p>${escapeHtml(cleanText)}</p>`;
-      })
-      .filter(Boolean)
-      .join('');
+  function checkUrlAuthorCategoryParam() {
+    const params = new URLSearchParams(window.location.search);
+    const categoryParam = params.get('authorCategory') || params.get('role');
+    if (categoryParam) {
+      const norm = categoryParam.toLowerCase();
+      if (['faculty', 'alumni', 'student'].includes(norm)) {
+        state.selectedAuthorRole = norm;
+      }
+    }
+  }
+
+  function updateNavAuthorCatButtons() {
+    const current = state.selectedAuthorRole || 'all';
+    const btns = document.querySelectorAll('.author-cat-nav-btn');
+    btns.forEach(btn => {
+      const role = btn.getAttribute('data-role');
+      if (role === current) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+
+  function selectAuthorCategory(role) {
+    state.selectedAuthorRole = role;
+
+    // Update URL param
+    const url = new URL(window.location);
+    if (role) {
+      url.searchParams.set('authorCategory', role);
+    } else {
+      url.searchParams.delete('authorCategory');
+      url.searchParams.delete('role');
+    }
+    window.history.pushState({}, '', url);
+
+    updateNavAuthorCatButtons();
+    applyFilters();
   }
 
   function normalizeArticles(rawData) {
@@ -121,12 +154,47 @@
         track = 'Enterprise';
       }
 
+      // Author extraction
+      let author = null;
+      if (item.author && typeof item.author === 'object') {
+        author = {
+          name: item.author.name || 'Anonymous Contributor',
+          role: (item.author.role || 'faculty').toLowerCase(),
+          designation: item.author.designation || '',
+          department: item.author.department || item.author.dept || '',
+          company: item.author.company || '',
+          batch: item.author.batch || '',
+          levelTerm: item.author.levelTerm || item.author.level_term || ''
+        };
+      } else if (typeof item.author === 'string') {
+        author = {
+          name: item.author,
+          role: 'faculty',
+          designation: 'Contributor',
+          department: 'Department of CSE',
+          company: '',
+          batch: '',
+          levelTerm: ''
+        };
+      } else {
+        author = {
+          name: 'BAUST Contributor',
+          role: 'faculty',
+          designation: 'Contributor',
+          department: 'Department of CSE',
+          company: '',
+          batch: '',
+          levelTerm: ''
+        };
+      }
+
       return {
         id: item.id || index + 1,
         title: item.title || item.Title || 'Untitled Article',
         categories: categories.length ? categories : ['general'],
         track: track,
         date: item.Date || item.date || item.publicationDate || '2024-08-12',
+        author: author,
         description: item.Description || item.description || item.summary || 'No description provided.',
         content: item['total article'] || item.total_article || item.content || item.Description || '',
         tags: tags.length ? tags : ['Technology']
@@ -136,6 +204,7 @@
 
   // --- Tags Menu Initialization ---
   function populateTagsMenu() {
+    if (!elements.tagsMenu) return;
     const allTagsSet = new Set();
     state.allArticles.forEach(art => {
       art.tags.forEach(t => allTagsSet.add(t));
@@ -174,6 +243,13 @@
     const q = state.searchQuery.toLowerCase().trim();
 
     state.filteredArticles = state.allArticles.filter(article => {
+      // Author Category Filter
+      if (state.selectedAuthorRole) {
+        if (article.author.role.toLowerCase() !== state.selectedAuthorRole.toLowerCase()) {
+          return false;
+        }
+      }
+
       // Track Filter
       if (state.currentTrack !== 'All' && article.track.toLowerCase() !== state.currentTrack.toLowerCase()) {
         return false;
@@ -194,8 +270,11 @@
         const catMatch = article.categories.some(c => c.toLowerCase().includes(q));
         const tagMatch = article.tags.some(t => t.toLowerCase().includes(q));
         const trackMatch = article.track.toLowerCase().includes(q);
+        const authorNameMatch = article.author.name.toLowerCase().includes(q);
+        const authorDeptMatch = article.author.department.toLowerCase().includes(q);
+        const authorCompanyMatch = article.author.company.toLowerCase().includes(q);
 
-        return titleMatch || descMatch || catMatch || tagMatch || trackMatch;
+        return titleMatch || descMatch || catMatch || tagMatch || trackMatch || authorNameMatch || authorDeptMatch || authorCompanyMatch;
       }
 
       return true;
@@ -213,7 +292,12 @@
   }
 
   function renderCounter() {
-    elements.articleCountLabel.textContent = `Total articles: ${state.filteredArticles.length}`;
+    let text = `Total articles: ${state.filteredArticles.length}`;
+    if (state.selectedAuthorRole) {
+      const categoryTitle = state.selectedAuthorRole.charAt(0).toUpperCase() + state.selectedAuthorRole.slice(1);
+      text += ` (Author Category: "${categoryTitle}")`;
+    }
+    elements.articleCountLabel.textContent = text;
   }
 
   function renderGrid() {
@@ -235,6 +319,41 @@
       const card = createCardElement(article);
       grid.appendChild(card);
     });
+  }
+
+  // Author details directly under title (Clean inline text layout, NO separate card box)
+  function formatAuthorBylineHTML(author) {
+    if (!author) return '';
+    const role = (author.role || '').toLowerCase();
+
+    let roleBadge = '';
+    let detailsParts = [];
+
+    if (role === 'alumni') {
+      roleBadge = '<span class="author-role-badge alumni">Alumni</span>';
+      if (author.designation) detailsParts.push(escapeHtml(author.designation));
+      if (author.company) detailsParts.push(`<strong class="company-text">${escapeHtml(author.company)}</strong>`);
+      if (author.batch) detailsParts.push(`<span class="batch-text">${escapeHtml(author.batch)}</span>`);
+    } else if (role === 'student') {
+      roleBadge = '<span class="author-role-badge student">Student</span>';
+      if (author.levelTerm) detailsParts.push(`<span class="level-term-text">${escapeHtml(author.levelTerm)}</span>`);
+      if (author.department) detailsParts.push(escapeHtml(author.department));
+    } else {
+      // Faculty / General
+      roleBadge = '<span class="author-role-badge faculty">Faculty</span>';
+      if (author.designation) detailsParts.push(escapeHtml(author.designation));
+      if (author.department) detailsParts.push(escapeHtml(author.department));
+    }
+
+    const detailsText = detailsParts.join(' • ');
+
+    return `
+      <div class="card-author-byline">
+        <span class="author-name">${escapeHtml(author.name)}</span>
+        ${roleBadge}
+        <span class="author-details-text">${detailsText ? '• ' + detailsText : ''}</span>
+      </div>
+    `;
   }
 
   function createCardElement(article) {
@@ -260,6 +379,11 @@
 
     cardTop.appendChild(titleLink);
     cardTop.appendChild(date);
+
+    // Author details text right under title (No inner card)
+    const authorByline = document.createElement('div');
+    authorByline.className = 'card-author-wrapper';
+    authorByline.innerHTML = formatAuthorBylineHTML(article.author);
 
     // Categories
     const catContainer = document.createElement('div');
@@ -291,7 +415,7 @@
       tagContainer.appendChild(tagPill);
     });
 
-    // Link Button to new detail page
+    // Link Button
     const viewBtn = document.createElement('a');
     viewBtn.className = 'view-btn';
     viewBtn.href = `article.html?id=${article.id}`;
@@ -303,6 +427,7 @@
     // Assemble Card
     const topWrapper = document.createElement('div');
     topWrapper.appendChild(cardTop);
+    topWrapper.appendChild(authorByline); // Author details written right under title
     topWrapper.appendChild(catContainer);
     topWrapper.appendChild(desc);
 
@@ -391,7 +516,8 @@
   }
 
   function escapeHtml(str) {
-    return str
+    if (!str) return '';
+    return String(str)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -402,20 +528,35 @@
   // --- Event Listeners Setup ---
   function setupEventListeners() {
     // Theme Toggle
-    elements.themeToggleBtn.addEventListener('click', toggleTheme);
+    if (elements.themeToggleBtn) {
+      elements.themeToggleBtn.addEventListener('click', toggleTheme);
+    }
 
     // Search Input
-    elements.searchInput.addEventListener('input', (e) => {
-      state.searchQuery = e.target.value;
-      elements.clearSearchBtn.hidden = !state.searchQuery;
-      applyFilters();
-    });
+    if (elements.searchInput) {
+      elements.searchInput.addEventListener('input', (e) => {
+        state.searchQuery = e.target.value;
+        elements.clearSearchBtn.hidden = !state.searchQuery;
+        applyFilters();
+      });
+    }
 
-    elements.clearSearchBtn.addEventListener('click', () => {
-      elements.searchInput.value = '';
-      state.searchQuery = '';
-      elements.clearSearchBtn.hidden = true;
-      applyFilters();
+    if (elements.clearSearchBtn) {
+      elements.clearSearchBtn.addEventListener('click', () => {
+        elements.searchInput.value = '';
+        state.searchQuery = '';
+        elements.clearSearchBtn.hidden = true;
+        applyFilters();
+      });
+    }
+
+    // Direct Author Category Navbar Buttons
+    const authorCatBtns = document.querySelectorAll('.author-cat-nav-btn');
+    authorCatBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const role = btn.getAttribute('data-role');
+        selectAuthorCategory(role === 'all' ? null : role);
+      });
     });
 
     // Quick Try Pills
@@ -441,51 +582,68 @@
       });
     });
 
-    // Tags Dropdown Toggle & Auto-close logic
-    elements.tagsDropdownBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isOpen = elements.tagsMenu.classList.contains('show');
-      if (isOpen) {
-        elements.tagsMenu.classList.remove('show');
-        elements.tagsDropdownBtn.classList.remove('active');
-      } else {
-        elements.tagsMenu.classList.add('show');
-        elements.tagsDropdownBtn.classList.add('active');
-      }
-    });
+    // Tags Dropdown Toggle
+    if (elements.tagsDropdownBtn && elements.tagsMenu) {
+      elements.tagsDropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = elements.tagsMenu.classList.contains('show');
+        if (isOpen) {
+          elements.tagsMenu.classList.remove('show');
+          elements.tagsDropdownBtn.classList.remove('active');
+        } else {
+          elements.tagsMenu.classList.add('show');
+          elements.tagsDropdownBtn.classList.add('active');
+        }
+      });
+    }
 
+    // Document click to close tags menu
     document.addEventListener('click', (e) => {
-      if (!elements.tagsDropdownBtn.contains(e.target) && !elements.tagsMenu.contains(e.target)) {
+      if (elements.tagsDropdownBtn && elements.tagsMenu && !elements.tagsDropdownBtn.contains(e.target) && !elements.tagsMenu.contains(e.target)) {
         elements.tagsMenu.classList.remove('show');
         elements.tagsDropdownBtn.classList.remove('active');
       }
     });
 
     // Page Size Select
-    elements.pageSizeSelect.addEventListener('change', (e) => {
-      state.pageSize = parseInt(e.target.value, 10);
-      state.currentPage = 1;
-      render();
-    });
+    if (elements.pageSizeSelect) {
+      elements.pageSizeSelect.addEventListener('change', (e) => {
+        state.pageSize = parseInt(e.target.value, 10);
+        state.currentPage = 1;
+        render();
+      });
+    }
 
     // Reset Filters
-    elements.resetFiltersBtn.addEventListener('click', () => {
-      state.searchQuery = '';
-      state.currentTrack = 'All';
-      state.selectedTags.clear();
-      elements.searchInput.value = '';
-      elements.clearSearchBtn.hidden = true;
-      elements.trackBtns.forEach(b => b.classList.remove('active'));
-      elements.trackBtns[0].classList.add('active');
-      elements.tryPillBtns.forEach(b => b.classList.remove('active'));
-      elements.tagsMenu.classList.remove('show');
-      elements.tagsDropdownBtn.classList.remove('active');
-      populateTagsMenu();
-      applyFilters();
-    });
+    if (elements.resetFiltersBtn) {
+      elements.resetFiltersBtn.addEventListener('click', () => {
+        state.searchQuery = '';
+        state.currentTrack = 'All';
+        state.selectedAuthorRole = null;
+        state.selectedTags.clear();
+
+        const url = new URL(window.location);
+        url.searchParams.delete('authorCategory');
+        url.searchParams.delete('role');
+        window.history.pushState({}, '', url);
+
+        updateNavAuthorCatButtons();
+
+        if (elements.searchInput) elements.searchInput.value = '';
+        if (elements.clearSearchBtn) elements.clearSearchBtn.hidden = true;
+        elements.trackBtns.forEach(b => b.classList.remove('active'));
+        if (elements.trackBtns[0]) elements.trackBtns[0].classList.add('active');
+        elements.tryPillBtns.forEach(b => b.classList.remove('active'));
+        if (elements.tagsMenu) elements.tagsMenu.classList.remove('show');
+        if (elements.tagsDropdownBtn) elements.tagsDropdownBtn.classList.remove('active');
+
+        populateTagsMenu();
+        applyFilters();
+      });
+    }
   }
 
-  // --- Constellation Grid Full Webpage Canvas Background ---
+  // --- Constellation Grid Canvas Background ---
   function initConstellationGrid() {
     const canvas = document.getElementById('constellationCanvas');
     if (!canvas) return;
@@ -582,7 +740,6 @@
       ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, width, height);
 
-      // Node Physics Engine (Hooke's Law Spring-Mass-Damping system)
       const SPRING_K = 18;
       const DAMPING = 0.82;
 
@@ -616,7 +773,6 @@
         n.y += n.vy * dt * 60;
       }
 
-      // Draw Connections (Exact 1-to-1 like Dark Mode)
       const MAX_CONN_DIST = 75;
       const MAX_CONN_DIST_SQ = MAX_CONN_DIST * MAX_CONN_DIST;
 
@@ -642,7 +798,6 @@
         }
       }
 
-      // Render Node Points & Interactive Highlights (Exact 1-to-1 like Dark Mode)
       for (let i = 0; i < nodes.length; i++) {
         const n = nodes[i];
         const dx = mouse.x - n.x;

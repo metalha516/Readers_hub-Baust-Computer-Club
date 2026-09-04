@@ -18,13 +18,19 @@
   <!-- Top Navigation Header -->
   <header class="site-header">
     <div class="header-container">
-      <!-- Logo -->
-      <a href="index.html" class="brand-logo" aria-label="BAUST Computer Club Home">
+      <!-- Left: Logo + Readers Hub title side-by-side -->
+      <a href="index.html" class="brand-logo-group" aria-label="BAUST Computer Club Home">
         <img src="img/logo.jpeg" alt="BAUST Computer Club Logo" class="bcc-logo-img">
+        <h1 class="header-title">Readers Hub</h1>
       </a>
 
-      <!-- Center Title -->
-      <h1 class="header-title"><a href="index.html" style="text-decoration:none; color:inherit;">Readers Hub</a></h1>
+      <!-- Center/Right: Author Category Nav Links (No dropdown) -->
+      <nav class="nav-author-categories" aria-label="Author Categories">
+        <a href="index.html" class="author-cat-nav-link">All Authors</a>
+        <a href="index.html?authorCategory=faculty" class="author-cat-nav-link">Faculty</a>
+        <a href="index.html?authorCategory=alumni" class="author-cat-nav-link">Alumni</a>
+        <a href="index.html?authorCategory=student" class="author-cat-nav-link">Students</a>
+      </nav>
 
       <!-- Right Header Actions -->
       <div class="header-actions">
@@ -61,6 +67,9 @@
       </div>
 
       <h1 id="articleTitle" class="article-main-title">Loading Article...</h1>
+
+      <!-- Author Box Under Title -->
+      <div id="articleAuthorBox" class="article-author-card"></div>
 
       <div id="articleCategories" class="card-categories"></div>
 
