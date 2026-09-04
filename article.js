@@ -33,8 +33,78 @@
     return id ? parseInt(id, 10) : 1;
   }
 
+  // --- CSV Parser Helper ---
+  const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1DosGeXz-sXt5TM-o9oZH92-ETsPEAelJ9Jw-cNS4oQU/gviz/tq?tqx=out:csv';
+
+  function parseCSV(text) {
+    const lines = [];
+    let row = [];
+    let inQuotes = false;
+    let currentVal = '';
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          currentVal += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        row.push(currentVal.trim());
+        currentVal = '';
+      } else if ((char === '\r' || char === '\n') && !inQuotes) {
+        if (char === '\r' && nextChar === '\n') i++;
+        row.push(currentVal.trim());
+        currentVal = '';
+        if (row.some(cell => cell !== '')) {
+          lines.push(row);
+        }
+        row = [];
+      } else {
+        currentVal += char;
+      }
+    }
+    if (currentVal || row.length > 0) {
+      row.push(currentVal.trim());
+      if (row.some(cell => cell !== '')) {
+        lines.push(row);
+      }
+    }
+
+    if (lines.length === 0) return [];
+    const headers = lines[0].map(h => h.trim());
+    return lines.slice(1).map(lineRow => {
+      const obj = {};
+      headers.forEach((h, idx) => {
+        obj[h] = lineRow[idx] !== undefined ? lineRow[idx] : '';
+      });
+      return obj;
+    });
+  }
+
   // --- Load Articles ---
   async function loadData() {
+    // 1. Try live Google Sheet CSV
+    try {
+      const response = await fetch(GOOGLE_SHEET_CSV_URL);
+      if (response.ok) {
+        const text = await response.text();
+        const parsed = parseCSV(text);
+        if (parsed && parsed.length > 0) {
+          allArticles = normalizeArticles(parsed);
+          renderArticle();
+          return;
+        }
+      }
+    } catch (csvErr) {
+      console.warn('Fetch Google Sheet CSV failed, using local data.json:', csvErr);
+    }
+
+    // 2. Local data.json fallback
     try {
       const response = await fetch('data.json');
       if (response.ok) {
@@ -47,6 +117,7 @@
       console.warn('Fetch failed, using window.DEFAULT_DATA fallback:', err);
     }
 
+    // 3. window.DEFAULT_DATA fallback
     if (window.DEFAULT_DATA) {
       allArticles = normalizeArticles(window.DEFAULT_DATA);
       renderArticle();
@@ -62,13 +133,15 @@
       let singleCategory = 'General';
       if (item.category && typeof item.category === 'string') {
         singleCategory = item.category.trim();
+      } else if (item.Category && typeof item.Category === 'string') {
+        singleCategory = item.Category.trim();
       } else if (Array.isArray(item.categories) && item.categories.length > 0) {
         singleCategory = item.categories[0].trim();
       } else if (typeof item.categories === 'string') {
         singleCategory = item.categories.split(',')[0].trim();
       }
 
-      let track = item.track || 'Engineering';
+      let track = item.track || item.Track || 'Engineering';
 
       let author = null;
       if (item.author && typeof item.author === 'object') {
@@ -82,6 +155,32 @@
           company: item.author.company || '',
           batch: item.author.batch || '',
           levelTerm: item.author.levelTerm || item.author.level_term || ''
+        };
+      } else if (item['Author Name'] || item['Author_Name']) {
+        let authorName = item['Author Name'] || item['Author_Name'];
+        let desig = item['Author_Designation'] || item['designation'] || '';
+        let dept = item['Author_Department'] || item['department'] || '';
+        let lt = item['LevelTerm'] || item['levelTerm'] || '';
+
+        let desigLower = desig.toLowerCase();
+        let nameLower = authorName.toLowerCase();
+        let role = 'student';
+        if (desigLower.includes('teacher') || desigLower.includes('professor') || desigLower.includes('lecturer') || desigLower.includes('faculty') || nameLower.includes('dr.')) {
+          role = 'teacher';
+        } else if (desigLower.includes('alumni') || desigLower.includes('engineer') || desigLower.includes('architect') || desigLower.includes('batch')) {
+          role = 'alumni';
+        } else if (desigLower.includes('student') || lt) {
+          role = 'student';
+        }
+
+        author = {
+          name: authorName,
+          role: role,
+          designation: desig,
+          department: dept,
+          company: '',
+          batch: '',
+          levelTerm: lt
         };
       } else if (typeof item.author === 'string') {
         author = {
@@ -110,10 +209,10 @@
         title: item.title || item.Title || 'Untitled Article',
         category: singleCategory,
         track: track,
-        date: item.Date || item.date || '2024-08-12',
+        date: item.Date || item.date || '2026-09-04',
         author: author,
         description: item.Description || item.description || '',
-        content: item['total article'] || item.total_article || item.content || item.Description || ''
+        content: item['total article'] || item['Total article'] || item.total_article || item.content || item.Description || ''
       };
     });
   }
